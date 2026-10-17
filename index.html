@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI SEO Article & Content Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans">
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur py-4 px-6 sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">⚡</span>
+        <h1 class="text-xl font-bold bg-gradient-to-r from-teal-400 to-indigo-400 bg-clip-text text-transparent">AI SEO Generator</h1>
+      </div>
+      <div class="text-xs bg-slate-800 text-teal-400 px-3 py-1.5 rounded-full border border-teal-500/30">Free Edition</div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+    <div class="bg-slate-900/70 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1">Google Gemini API Key (Stored locally in your browser)</label>
+        <input type="password" id="apiKeyInput" placeholder="Paste your AI Studio API key here" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-teal-500 text-slate-200">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-1">Enter Topic, Question, or Keyword</label>
+        <textarea id="promptInput" rows="3" placeholder="e.g. How does cheque bounce work in India, penalties and legal rules" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-teal-500 text-slate-200"></textarea>
+      </div>
+
+      <button id="generateBtn" onclick="generateContent()" class="w-full py-3.5 px-6 rounded-xl font-semibold bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white shadow-lg shadow-teal-500/20 active:scale-[0.99] transition flex items-center justify-center space-x-2">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Generate SEO Content</span>
+      </button>
+    </div>
+
+    <div id="loading" class="hidden text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-teal-500 border-t-transparent"></div>
+      <p class="text-sm text-slate-400 mt-3">Crafting high-ranking SEO content...</p>
+    </div>
+
+    <div id="resultBox" class="hidden space-y-6">
+      <div class="bg-slate-900/70 border border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+          <h2 class="text-lg font-bold text-teal-400 flex items-center gap-2"><i class="fa-solid fa-file-lines"></i> Result Output</h2>
+          <button onclick="copyFullContent()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">Copy All</button>
+        </div>
+        <div id="contentDisplay" class="prose prose-invert max-w-none text-slate-300 text-sm leading-relaxed whitespace-pre-wrap"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    window.onload = () => {
+      const savedKey = localStorage.getItem('gemini_api_key');
+      if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
+    };
+
+    async function generateContent() {
+      const apiKey = document.getElementById('apiKeyInput').value.trim();
+      const prompt = document.getElementById('promptInput').value.trim();
+      const btn = document.getElementById('generateBtn');
+      const loading = document.getElementById('loading');
+      const resultBox = document.getElementById('resultBox');
+      const contentDisplay = document.getElementById('contentDisplay');
+
+      if (!apiKey) {
+        alert('Please enter your Gemini API Key first!');
+        return;
+      }
+      if (!prompt) {
+        alert('Please enter a topic or question!');
+        return;
+      }
+
+      localStorage.setItem('gemini_api_key', apiKey);
+      btn.disabled = true;
+      loading.classList.remove('hidden');
+      resultBox.classList.add('hidden');
+
+      const systemPrompt = `You are a professional SEO writer. Provide a comprehensive, high-quality blog article for the topic provided by the user. Include:
+1. SEO Catchy Title
+2. Meta Description (150 chars)
+3. High Traffic Focus Keywords
+4. Full Structured Article with headings (H2, H3), bullet points, and practical advice.`;
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nTopic: ${prompt}` }] }]
+          })
+        });
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message || 'API Error');
+
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+        contentDisplay.innerText = reply;
+        resultBox.classList.remove('hidden');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        loading.classList.add('hidden');
+      }
+    }
+
+    function copyFullContent() {
+      const text = document.getElementById('contentDisplay').innerText;
+      navigator.clipboard.writeText(text);
+      alert('Content copied to clipboard!');
+    }
+  </script>
+</body>
+</html>
